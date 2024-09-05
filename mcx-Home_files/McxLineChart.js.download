@@ -1,0 +1,588 @@
+﻿function pad(str, max) {
+    str = str.toString();
+    return str.length < max ? pad("0" + str, max) : str;
+}
+
+var Days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+var Months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function getYaxisStats(chart, min, multiplier) {
+    //var v1 = new String(parseInt(chart.yAxis[0].dataMax)).length - 2; 
+    //var scale = parseInt("1" + aryZero.slice(0, v1).join(''));
+
+    var scale = 100;
+    var stepRound = 5;
+    if (parseInt(chart.yAxis[0].dataMax) / 10000000 >= 1) {
+        scale = 100000;
+        stepRound = 1;
+    }
+    else if (parseInt(chart.yAxis[0].dataMax) / 100000 >= 1) {
+        scale = parseInt((chart.yAxis[0].dataMax - min + 100) / 100);
+        stepRound = 1;
+    }
+    else if (parseInt(chart.yAxis[0].dataMax) / 10000 >= 1) {
+        scale = parseInt((chart.yAxis[0].dataMax - min + 10) / 10);
+        stepRound = 1;
+    }
+    else if (parseInt(chart.yAxis[0].dataMax) / 1000 >= 1) {
+        //scale = 10;
+        scale = parseInt((chart.yAxis[0].dataMax - min + 5) / 5);
+        stepRound = 1;
+    }
+    else if (parseInt(chart.yAxis[0].dataMax) / 100 >= 1) {
+        scale = parseInt((chart.yAxis[0].dataMax - min + 2) / 2);
+        stepRound = 1;
+    }
+
+    var newMax = getNearestRoundOff(chart.yAxis[0].dataMax, scale, stepRound); //(parseInt(chart.yAxis[0].dataMax / scale) + 5 - parseInt(chart.yAxis[0].dataMax / scale) % 5) * scale;
+
+    //5 means wish to show 5-6 label on category
+    var stepval = (parseInt(chart.yAxis[0].dataMax) - parseInt(chart.yAxis[0].dataMin)) / (3 * scale);
+    var newstepval = getNearestRoundOff(stepval, 1, stepRound);
+
+    var _m = getNearestRoundOffFloor(min, scale, stepRound)
+    if (min - _m < 2) {
+        _m -= scale;
+    }
+
+
+    //return { min: min - (scale * multiplier), max: newMax, interval: scale };
+    return { min: _m, max: newMax, interval: scale };
+
+}
+
+
+function getNearestRoundOff(v1, scale, round) {
+    var newVal = (parseInt(v1 / scale) + round - parseInt(v1 / scale) % round) * scale;
+    return newVal;
+}
+
+function getNearestRoundOffFloor(v1, scale, round) {
+    var newVal = (parseInt(v1 / scale) - parseInt(v1 / scale) % round) * scale;
+    return newVal;
+}
+
+function GraphTitle(Data, Type) {
+    var GraphTitle = "";
+    var d = Data.IntradayGraphPlot;
+    var _close = Data.PreviousClose;
+    var colorname = d[d.length - 1].y > _close ? 'green' : 'red';
+    var percentageChange = Data.PercentageChange;
+    var Change = "";
+  
+        //if (_close == 0.00)
+        //    percentageChange = ((d[d.length - 1].y - _close) * 100 / 0.01).toFixed(2);
+        //else
+        //    percentageChange = ((d[d.length - 1].y - _close) * 100 / _close).toFixed(2);
+
+        // var Change = (d[d.length - 1].y > _close ? '+' : '') + FormatAmount((d[d.length - 1].y - _close) * 100 / _close) + '%';
+
+        Change = (d[d.length - 1].y > _close ? '+' : '') + FormatAmount(percentageChange) + '%';
+  
+    //var Imagepath = d[d.length - 1].y > _close ? '<img src="/Includes/Images/Up-arrow.png"/>' : '<img src="/Includes/Images/down-arrow.png"/>';
+    var Imagepath = d[d.length - 1].y > _close ? '<span class="graphup-arrow"></span>' : '<span class="graphdown-arrow"></span>';
+
+    if (Type == "index")
+        GraphTitle = '<div class="main-graph" style="text-align:right;">';
+    else if (Type == 'TRMCXCMP') {//new Option Added for Graph for MCXCOMDEX on Trading and Survillence
+        var dt = new Date(Data.MaxDate);
+        GraphTitle = '<div class="graph-text" style="font-size:12px;margin-top:-16px;width:250px"> <b style="font-size:16px;">TRMCXCMP</b><span style="font-size:11px;margin-left: 48px;"> ' + dt.format("dd/MM/yyyy HH:mm") + '</span>';
+    }
+    else
+        GraphTitle = '<div class="graph-text">';
+
+    var TitleImage = "";
+    switch (Type) {
+        case "Bullion":
+            TitleImage = '<span class="graphbullion" style="vertical-align: middle; margin-right:3px"></span><h3 style="display:inline;vertical-align: middle;">' + Data.ScripName + '</h3>';
+            break;
+        case "Energy":
+            //TitleImage = '<h3><img src="/Includes/Images/graph-crude.png"/>' + Data.ScripName + '</h3>';
+            TitleImage = '<span class="graphgraph-crude" style="vertical-align: middle; margin-right:3px"></span><h3 style="display:inline;vertical-align: middle;">' + Data.ScripName + '</h3>';
+            break;
+        case "Metal":
+            //TitleImage = '<h3><img src="/Includes/Images/Metal.png"/>' + Data.ScripName + '</h3>';
+            TitleImage = '<span class="graphmetal" style="vertical-align: middle; margin-right:3px"></span><h3 style="display:inline;vertical-align: middle;">' + Data.ScripName + '</h3>';
+            break;
+        case "Agri":
+            //TitleImage = '<h3><img src="/Includes/Images/Agri.png"/>' + Data.ScripName + '</h3>';
+            TitleImage = '<span class="graphagri" style="vertical-align: middle; margin-right:3px"></span><h3 style="display:inline;vertical-align: middle;">' + Data.ScripName + '</h3>';
+            break;
+    }
+    var TitleText = Type == 'index' ? "<p>" + FormatAmount(d[d.length - 1].y) + "</p>" : '';
+
+    var SubtitleText = Type == 'index' ? '<span style="color:' + colorname + ';font-size:19px;">' + Change + ' ' + Imagepath + '</span>' : '';
+
+    var BottomText = Type == 'index' ? '' : '<div>' + Data.Expiry + '</div><p>' + FormatAmount(d[d.length - 1].y) + Imagepath + '<span class="' + colorname + '">' + Change + '</span></p>';
+
+    return GraphTitle + TitleImage + TitleText + SubtitleText + BottomText + '</div>';
+}
+function FrameChart(a, b, c) {
+    //$(document).ready(function () {
+    /*
+    Parameter 'a' = Data for Chart .
+    parameter 'b' = element in which graph must be formed .
+    parameter 'c' = type of Scrip for which the graph must be formed . This decides the image to show .
+    */
+    var d_Data = a.Data;
+
+    var d = d_Data.IntradayGraphPlot;
+
+    var _close = d_Data.PreviousClose; //dynamic
+
+    var colorname = ''
+    var Imagepath = ''
+    var SubtitleText = ''
+    var percentageChange = d_Data.PercentageChange;;
+    //if ( _close == 0.00)
+    //    percentageChange = ((d[d.length - 1].y - _close) * 100 / 0.01).toFixed(2);
+    //else
+    //    percentageChange = ((d[d.length - 1].y - _close) * 100 / _close).toFixed(2);
+    //var Change = (d[d.length - 1].y > _close ? '+' : '') + ((d[d.length - 1].y - _close) * 100 / _close).toFixed(2) + '%';
+    var Change = (d[d.length - 1].y > _close ? '+' : '') + percentageChange + '%';
+
+    if (d.length > 0) {
+        colorname = d[d.length - 1].y > _close ? 'green' : 'red';
+        Imagepath = d[d.length - 1].y > _close ? '<img src="../Includes/Images/Up-arrow.png"/>' : '<img src="../Includes/Images/down-arrow.png"/>';
+        SubtitleText = c == 'index' ? '<span style="color:' + colorname + ';font-size:19px;">' + Change + ' ' + Imagepath + '</span>' : '';
+    }
+    var TitleImage = "";
+
+    var TitleText = GraphTitle(d_Data, c);
+    $(b).highcharts({
+        chart: {
+            margin: 0,
+            events: {
+                load: function () {
+                    $("text:contains('Highcharts.com')").remove();
+                }
+            }
+        },
+        title: {
+
+            text: TitleText,
+            align: c == "index" ? 'right' : 'left',
+            x: c == "index" ? -15 : -9,
+            useHTML: true,
+            y: 11,
+            style: {
+                //color: '#FF00FF',
+                fontWeight: 'bold',
+                fontSize: c == 'index' ? '24px' : '20px',
+                fontFamily: 'RobotoRegular'
+            }
+        },
+        subtitle: {
+            text: null
+        },
+        legend: { enabled: false },
+
+        xAxis: {
+            type: 'datetime',
+            gridLineWidth: 0,
+            min: d_Data.MinDate,
+            max: d_Data.MaxDate,
+            tickLength: c == "index" ? 10 : 0, //sets tickLine on Axis .
+
+            labels: {
+                enabled: c == "index" ? true : false,
+                x: 0,
+                y: -2,
+                formatter: function () {
+                    var d1 = new Date(this.value);
+                    return d1.getHours() + ":" + d1.getMinutes();
+                }
+            }
+        },
+        yAxis: {
+
+            min: d_Data.Low,
+            startOnTick: false,
+            gridLineWidth: c == "index" ? 0.5 : 0,
+            labels: { enabled: false },
+            title: null,
+            plotLines: [{
+                value: _close,
+                color: 'white',
+                dashStyle: 'shortdot',
+                width: c == "index" ? 0.01 : 0,
+                label: {
+                    text: c == 'index' ? '<b>' + FormatAmount(_close) + '</b>' : null,
+                    useHTML: true,
+                    y: 12,
+                    x: 5
+                }
+            }]
+        },
+
+        plotOptions: {
+            series: {
+                animation: {
+                    duration: 1000
+                },
+                states: {
+                    hover: {
+                        enabled: false
+                    }
+                }
+            }
+        }, 
+         
+        series: [
+            {
+                marker: {
+                    enabled: false
+                },
+                name: '',
+                type: 'area',
+                data: d,
+                enableMouseTracking: false,
+                turboThreshold: 1000000,
+                color: d.length >= 2 ? (d[d.length - 1].y < _close ? '#f9d5d4' : '#c6e7c6') : 'gray', //dynamic
+                lineColor: d.length >= 2 ? (c == 'index' ? (d[d.length - 1].y < _close ? '#e13837' : '#7DD927') : 'none') : 'gray', //dynamic
+                index: 0
+            },
+            {
+                marker: {
+                    enabled: false
+                },
+                value: _close,
+                name: 'pcp',
+                type: 'line',
+                enableMouseTracking: false,
+                data: [[d_Data.MinDate, _close], [d_Data.MaxDate, _close]],
+                color: 'grey',
+                lineWidth: c == "index" ? 1 : 1,
+                text: c == 'index' ? '<b>' + FormatAmount(_close) + '</b>' : null,
+                dashStyle: 'shortdash',
+                useHTML: true,
+                index: 1
+            }
+            ]
+    });
+
+    var chart = $(b).highcharts();
+    var YaxisObj = getYaxisStats(chart, d_Data.Low, c == "index" ? 1.8 : 1);
+    chart.yAxis[0].update({ min: YaxisObj.min, max: YaxisObj.max, tickInterval: YaxisObj.interval }, true);
+
+   if (c) {
+        var chart = $(b).highcharts();
+        if ((chart.yAxis[0].min + chart.yAxis[0].tickInterval) >= _close) {
+            chart.yAxis[0].update({ min: (chart.yAxis[0].min - chart.yAxis[0].tickInterval) }, true);
+        }
+
+        if (chart.yAxis[0].max == _close) {
+            chart.yAxis[0].update({ max: (chart.yAxis[0].max + chart.yAxis[0].tickInterval) }, true);
+        }
+    }
+}
+
+function QChart(a, b, c) {
+    /*
+    Parameter 'a' = Data for Chart .
+    parameter 'b' = element in which graph must be formed .
+    parameter 'c' = true or False whether to plot close Line or not
+    */
+    
+    var plotoption_1 =  {animation: {duration: 1000}, marker: {enabled: false,  radius:0 }, states : {hover:  { lineWidth : 1.5, halo: {size: 4, attributes: {zIndex: 999, fill:'gray'} }}}};
+
+    var d_Data = a.Data;
+
+    var d = d_Data.IntradayGraphPlot;
+
+    var _close = d_Data.PreviousClose;
+
+    //var Pad = $(b).width() - $(b).width() * 0.4;
+
+    $(b).highcharts({
+        chart: {
+            //margin: 0,
+            marginLeft: 65,
+            plotBackgroundColor: '#F3F3F3',
+            events: {
+                load: function () {
+                    $("text:contains('Highcharts.com')").remove();
+                }
+            }
+        },
+        
+        tooltip: {
+            enabled: true,
+            followPointer: true,
+            followTouchMove: true,
+            formatter: function () {
+                var d = new Date(this.point.x);
+                var dtstr = c==true ? d.format("dd-MMM-yyyy HH:mm"):d.format("dd-MMM-yyyy");
+
+                var tbl = "<table border='0'  class='maincharttooltip'><tr><td colspan=2 align='right'><b>" + dtstr + "</b></td></tr>";
+                tbl += "<tr><td ><b>" + this.point.series.name + "&nbsp;&nbsp;&nbsp;</b></td><td  align='right'>" + this.point.y.toFixed(2) + "</td></tr>";
+                return tbl;
+            },
+            useHTML: true,
+            borderWidth: 0,
+            style: {
+                padding: 3
+            }
+        },
+
+        title: null,
+        subtitle: {
+            text: null
+        },
+        legend: { enabled: false },
+
+        xAxis: {
+            type: 'datetime',
+            gridLineWidth: 1,
+            gridLineDashStyle: 'shortdash',
+            gridZIndex: 4,
+            min: d_Data.MinDate,
+            max: d_Data.MaxDate,
+            //tickLength: c == "index" ? 10 : 0, //sets tickLine on Axis .
+
+            labels: {
+                enabled: true,
+                x: 0,
+                y: -2,
+                formatter: function () {
+                    var d1 = new Date(this.value);
+                    if (c)
+                        return d1.getHours() + ":" + (d1.getMinutes().toString().length == 1 ? "0" + d1.getMinutes() : d1.getMinutes());
+                    else {
+                        var Month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                        return d1.getDate() + "-" + Month[d1.getMonth()];
+                    }
+                }
+            }
+        },
+        yAxis: {
+
+            min: d_Data.Low,
+            startOnTick: false,
+            gridLineWidth: 1,
+            gridLineDashStyle: 'shortdash',
+            gridZIndex: 4,
+            labels: {
+                enabled: true,
+                align: 'right',
+                format: '{value:.2f}'
+            },
+            title: null,
+            plotLines: [{
+                value: _close,
+                color: 'white',
+                dashStyle: 'shortdot',
+                width: c ? 0.01 : 0,
+                label: {
+                    text: '<b>P.Close : ' + FormatAmount(_close) + '</b>',
+                    useHTML: true,
+                    x: 5//Pad
+                }
+            }]
+        },
+        /*
+        plotOptions: {
+            series: {
+                animation: {
+                    duration: 1000
+                },
+                states: {
+                    hover: {
+                        enabled: false
+                    }
+                }
+            }
+        },
+        */
+        plotOptions: { series: plotoption_1 }, 
+        series: [
+            {
+                marker: {
+                    enabled: false
+                },
+                index: 0,
+                name: '',
+                type: 'area',
+                data: d,
+                enableMouseTracking: false,
+                color: 'white',
+                lineWidth:1
+            },
+            {
+                marker: {
+                    enabled: false
+                },
+                index: 1,
+                threshold: _close,
+                cursor: 'pointer',
+                enableMouseTracking: true,
+                name: d_Data.ScripName,
+                type: 'line',
+                data: d,
+                color: 'green',
+                negativeColor: 'Red',
+                lineWidth:1.5
+            },
+            {
+                marker: {
+                    enabled: false
+                },
+                index: 2,
+                name: 'pcp',
+                type: 'line',
+                lineColor: c ? 'gray' : 'none',
+                data: [[d_Data.MinDate, _close], [d_Data.MaxDate, _close]],
+                dashStyle: 'shortdot',
+                enableMouseTracking: false
+            }]
+    });
+    if (c) {
+        var chart = $(b).highcharts();
+        if (chart.yAxis[0].min == _close) {
+            chart.yAxis[0].update({ min: (chart.yAxis[0].min - chart.yAxis[0].tickInterval) }, true);
+        }
+
+        if (chart.yAxis[0].max == _close) {
+            chart.yAxis[0].update({ max: (chart.yAxis[0].max + chart.yAxis[0].tickInterval) }, true);
+        }
+    }
+}
+
+function CompareChart(a, b) {
+    /*
+    Parameter 'a' = Data for Chart .
+    parameter 'b' = element in which graph must be formed .
+    parameter 'c' = true or False whether to plot close Line or not
+    */
+    var d_Data = a.Data;
+    var XAxis=[];
+    var YAxis=[];
+
+    var d = d_Data.IntradayGraphPlot;
+
+    var _close = 0;
+
+     //$.each(d, function (Key, Value) { YAxis.push(Value.y);XAxis.push(  Value.x); })
+
+     $(b).highcharts({
+         chart: {
+             //margin: 0,
+             marginLeft: 65,
+             plotBackgroundColor: '#F3F3F3',
+             events: {
+                 load: function () {
+                     $("text:contains('Highcharts.com')").remove();
+                 }
+             }
+         },
+         title: null,
+         subtitle: {
+             text: null
+         },
+         legend: { enabled: true },
+         tooltip: {
+            enabled: true,
+            followPointer: true,
+            followTouchMove: true,
+            formatter: function () {
+                var d = new Date(this.point.x);
+                var dtstr = d.format("dd-MMM-yyyy HH:mm");
+
+                var tbl = "<table border='0'  class='maincharttooltip'><tr><td colspan=2 align='right'><b>" + dtstr + "</b></td></tr>";
+                tbl += "<tr><td ><b>" + this.point.series.name + "&nbsp;&nbsp;&nbsp;</b></td><td  align='right'>" + this.point.y.toFixed(2) + "</td></tr>";
+                return tbl;
+            },
+            useHTML: true,
+            borderWidth: 0,
+            style: {
+                padding: 3
+            }
+        },
+         xAxis: {
+             type: 'datetime',
+             gridLineWidth: 0,
+             gridLineDashStyle: 'shortdash',
+             gridZIndex: 4,
+             //categories:XAxis,
+             labels: {
+                 enabled: true,
+                 x: 0,
+                 y: -2,
+                 formatter: function () {
+                     var d1 = new Date(this.value);
+                     if (d_Data.PreviousClose > 0)
+                         return d1.getHours() + ":" + (d1.getMinutes().toString().length == 1 ? "0" + d1.getMinutes() : d1.getMinutes());
+                     else {
+                         var Month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                         return d1.getDate() + "-" + Month[d1.getMonth()];
+                     }
+                 },
+                 tickInterval: 1800000
+             }
+         },
+         yAxis: {
+
+             //min: d_Data.Low,
+             startOnTick: false,
+             gridLineWidth: 0,
+             gridLineDashStyle: 'shortdash',
+             minTickInterval: 0.50,
+             gridZIndex: 4,
+             labels: {
+                 enabled: true,
+                 align: 'right',
+                 format: '{value:.2f}'
+             },
+             title:{enabled:true,text: '<b>% Change</b>',margin:10},
+             plotLines: [{
+                 value: 0,
+                 color: 'Black',
+                 dashStyle: 'dash',
+                 width: 1
+             }]
+         },
+
+         plotOptions: {
+             series: {
+                 animation: {
+                     duration: 1000
+                 }
+             }
+         },
+
+         series: [
+            {
+                marker: {
+                    enabled: false
+                },
+                index: 1,
+                threshold: _close,
+                cursor: 'pointer',
+                enableMouseTracking: true,
+                name: d_Data.ScripName + '-' + d_Data.Expiry,
+                type: 'line',
+                data: d,
+            }]
+     });
+
+     var chart = $(b).highcharts();
+     if (chart.yAxis[0].max < 0 && chart.yAxis[0].min < 0) {
+            chart.yAxis[0].update({ max: 0 }, true);
+        }
+
+        if (chart.yAxis[0].max > 0 && chart.yAxis[0].min < 0) {
+            chart.yAxis[0].update({ tickInterval: chart.yAxis[0].min*(-1) }, true);
+        }
+        
+         if (chart.yAxis[0].max > 0 && chart.yAxis[0].min > 0) {
+            chart.yAxis[0].update({ min: 0 }, true);
+        }
+
+        if (chart.yAxis[0].min == 0) {
+            chart.yAxis[0].update({ min: (chart.yAxis[0].min - chart.yAxis[0].tickInterval*2) }, true);
+        }
+
+        if (chart.yAxis[0].max == 0) {
+            chart.yAxis[0].update({ max: (chart.yAxis[0].max + chart.yAxis[0].tickInterval*2) }, true);
+        }
+}
